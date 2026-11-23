@@ -10,7 +10,7 @@ class ExpenseProvider extends ChangeNotifier {
 
   List<TransactionModel> _transactions = [];
   bool _isLoading = true;
-  String _currencySymbol = r'$';
+  String _currencySymbol = 'ر.ي';
   String _selectedCategoryFilter = 'all';
 
   ExpenseProvider({required ExpenseRepository repository})

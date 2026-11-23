@@ -42,14 +42,17 @@ class LocalStorageService {
     if (data == null || data.isEmpty) {
       final now = DateTime.now();
       return BudgetModel(
-        monthlyLimit: 2500.0,
+        monthlyLimit: 250000.0,
+        currency: 'ر.ي',
+        categoryCurrency: 'ر.ي',
+        exchangeRate: 1.0,
         month: now.month,
         year: now.year,
         categoryLimits: const {
-          'food': 600.0,
-          'transport': 300.0,
-          'shopping': 400.0,
-          'bills': 500.0,
+          'food': 60000.0,
+          'transport': 30000.0,
+          'shopping': 40000.0,
+          'bills': 50000.0,
         },
       );
     }
@@ -58,7 +61,14 @@ class LocalStorageService {
       return BudgetModel.fromMap(decoded);
     } catch (e) {
       final now = DateTime.now();
-      return BudgetModel(monthlyLimit: 2500.0, month: now.month, year: now.year);
+      return BudgetModel(
+        monthlyLimit: 250000.0,
+        currency: 'ر.ي',
+        categoryCurrency: 'ر.ي',
+        exchangeRate: 1.0,
+        month: now.month,
+        year: now.year,
+      );
     }
   }
 
@@ -69,7 +79,7 @@ class LocalStorageService {
 
   Future<String> getCurrencySymbol() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_currencyKey) ?? r'$';
+    return prefs.getString(_currencyKey) ?? 'ر.ي';
   }
 
   Future<void> saveCurrencySymbol(String symbol) async {

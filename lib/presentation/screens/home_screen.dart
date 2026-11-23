@@ -245,14 +245,26 @@ class HomeScreen extends StatelessWidget {
         final currency = expenseProv.currencySymbol;
         final recentList = expenseProv.recentTransactions;
 
-        // حسابات الميزانية الشهرية للبطاقة
+        // حسابات الميزانية الشهرية للبطاقة مع مراعاة العملة وفارق الصرف
         final monthlyLimit = budgetProv.monthlyLimit;
         final currentMonthSpent = expenseProv.currentMonthExpense;
-        final remaining = budgetProv.remainingBudget(currentMonthSpent);
-        final usageRatio = budgetProv.calculateUsagePercentage(currentMonthSpent);
+        final remaining = budgetProv.remainingBudget(
+          currentMonthSpent,
+          expenseCurrency: currency,
+        );
+        final usageRatio = budgetProv.calculateUsagePercentage(
+          currentMonthSpent,
+          expenseCurrency: currency,
+        );
         final usagePercentText = '${(usageRatio * 100).toStringAsFixed(0)}%';
-        final isOverBudget = budgetProv.isOverBudget(currentMonthSpent);
-        final isNearBudget = budgetProv.isNearLimit(currentMonthSpent);
+        final isOverBudget = budgetProv.isOverBudget(
+          currentMonthSpent,
+          expenseCurrency: currency,
+        );
+        final isNearBudget = budgetProv.isNearLimit(
+          currentMonthSpent,
+          expenseCurrency: currency,
+        );
 
         final Color budgetBarColor = isOverBudget
             ? AppTheme.expenseColor
@@ -308,7 +320,8 @@ class HomeScreen extends StatelessWidget {
                                 onPressed: () => _showSmartInsightsDialog(
                                   context,
                                   expenseProv.generateSmartInsights(
-                                    monthlyBudgetLimit: budgetProv.monthlyLimit,
+                                    monthlyBudgetLimit:
+                                        budgetProv.monthlyLimitIn(currency),
                                   ),
                                 ),
                                 icon: Stack(
@@ -495,16 +508,32 @@ class HomeScreen extends StatelessWidget {
                                   ),
                                 ],
                               ),
-                              Text(
-                                Formatters.formatCurrency(
-                                  monthlyLimit,
-                                  symbol: currency,
-                                ),
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w800,
-                                  color: colorOption.primary,
-                                ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    Formatters.formatCurrency(
+                                      monthlyLimit,
+                                      symbol: budgetProv.currency,
+                                    ),
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w800,
+                                      color: colorOption.primary,
+                                    ),
+                                  ),
+                                  if (!budgetProv.areCurrenciesEqual)
+                                    Text(
+                                      '≈ ${Formatters.formatCurrency(budgetProv.monthlyLimitInCategoriesCurrency, symbol: budgetProv.categoryCurrency)}',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: isDark
+                                            ? Colors.white60
+                                            : Colors.black54,
+                                      ),
+                                    ),
+                                ],
                               ),
                             ],
                           ),

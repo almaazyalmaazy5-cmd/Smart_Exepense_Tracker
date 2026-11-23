@@ -40,6 +40,46 @@ class AppConstants {
     {'code': 'EUR', 'symbol': '€', 'name': 'يورو'},
   ];
 
+  /// البحث عن رمز كود العملة (مثل YER أو USD) عبر الرمز الظاهر
+  static String findCurrencyCode(String symbol) {
+    for (final c in currencies) {
+      if (c['symbol'] == symbol || c['code'] == symbol) return c['code']!;
+    }
+    return symbol;
+  }
+
+  /// إرجاع اسم العملة العربي
+  static String findCurrencyName(String symbol) {
+    for (final c in currencies) {
+      if (c['symbol'] == symbol || c['code'] == symbol) return c['name']!;
+    }
+    return symbol;
+  }
+
+  /// أسعار الصرف الافتراضية التقديرية مقابل الريال اليمني (العملة المحلية الأساسية)
+  static const Map<String, double> defaultRatesToYer = {
+    'YER': 1.0,
+    'SAR': 140.0,
+    'USD': 535.0,
+    'AED': 145.0,
+    'EUR': 580.0,
+    'EGP': 11.0,
+  };
+
+  /// حساب سعر الصرف الافتراضي بين أي عملتين
+  /// مثال: 1 USD = 535 YER أو 1 SAR = 140 YER
+  static double getDefaultExchangeRate(String fromSymbol, String toSymbol) {
+    if (fromSymbol == toSymbol) return 1.0;
+    final fromCode = findCurrencyCode(fromSymbol);
+    final toCode = findCurrencyCode(toSymbol);
+
+    final fromRate = defaultRatesToYer[fromCode] ?? 1.0;
+    final toRate = defaultRatesToYer[toCode] ?? 1.0;
+
+    if (toRate == 0) return 1.0;
+    return fromRate / toRate;
+  }
+
   // ========== [3] طرق الدفع المتاحة (اختياري في شاشة إضافة عملية) ==========
   static const List<PaymentMethodOption> paymentMethods = [
     PaymentMethodOption(

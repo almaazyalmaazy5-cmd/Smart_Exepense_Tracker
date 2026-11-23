@@ -8,28 +8,25 @@ import '../providers/budget_provider.dart';
 import '../providers/expense_provider.dart';
 import '../providers/theme_provider.dart';
 import 'analytics_screen.dart';
+import 'manage_budget_screen.dart';
 
 // ============================================================================
 // الواجهة الرابعة: الميزانية الشهرية (BudgetScreen)
 // ----------------------------------------------------------------------------
-// مطابقة للتصميم في الصورة وتتكوّن من 3 أقسام رئيسية واضحة:
-//   [1] بطاقة الميزانية الكلية المحددة + شريط التقدم + المتبقي ونسبة الإنفاق
-//   [2] تفاصيل الميزانية حسب التصنيف (مع شريط تقدم وتنبيه 80% لكل تصنيف)
-//   [3] زر "إدارة الميزانية" في الأسفل لتعديل الميزانية الكلية وميزانيات الفئات
+// مطابقة للتصميم وتتكوّن من 3 أقسام رئيسية واضحة:
+//   [1] بطاقة الميزانية الكلية المحددة مع عملتها وفارق الصرف + شريط التقدم + المتبقي
+//   [2] تفاصيل الميزانية حسب التصنيف (مع عملة التصنيفات وشريط التقدم وتنبيه 80%)
+//   [3] زر "إدارة الميزانية" في الأسفل لفتح واجهة إدارة الميزانية الشاملة
 // ============================================================================
 
 class BudgetScreen extends StatelessWidget {
   const BudgetScreen({super.key});
 
-  /// فتح نافذة إدارة الميزانية (الكلية + جميع التصنيفات الفرعية)
+  /// فتح واجهة إدارة الميزانية (الكلية + العملات + فارق الصرف + الفئات)
   void _openManageBudgetSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => const _ManageBudgetSheet(),
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ManageBudgetScreen()),
     );
   }
 
@@ -56,15 +53,32 @@ class BudgetScreen extends StatelessWidget {
     return Consumer2<BudgetProvider, ExpenseProvider>(
       builder: (context, budgetProv, expenseProv, child) {
         final limit = budgetProv.monthlyLimit;
+        final budgetCurrency = budgetProv.currency;
+        final categoryCurrency = budgetProv.categoryCurrency;
+        final expenseCurrency = expenseProv.currencySymbol;
+
         final currentSpent = expenseProv.currentMonthExpense;
         final spentByCategory = expenseProv.currentMonthExpenseByCategory;
-        final currency = expenseProv.currencySymbol;
 
-        final usageRatio = budgetProv.calculateUsagePercentage(currentSpent);
-        final rawPercent = limit > 0 ? (currentSpent / limit) * 100 : 0.0;
-        final remaining = budgetProv.remainingBudget(currentSpent);
-        final isOver = budgetProv.isOverBudget(currentSpent);
-        final isNear = budgetProv.isNearLimit(currentSpent);
+        final usageRatio = budgetProv.calculateUsagePercentage(
+          currentSpent,
+          expenseCurrency: expenseCurrency,
+        );
+        final effectiveLimit = budgetProv.effectiveTotalLimit(expenseCurrency);
+        final rawPercent =
+            effectiveLimit > 0 ? (currentSpent / effectiveLimit) * 100 : 0.0;
+        final remaining = budgetProv.remainingBudget(
+          currentSpent,
+          expenseCurrency: expenseCurrency,
+        );
+        final isOver = budgetProv.isOverBudget(
+          currentSpent,
+          expenseCurrency: expenseCurrency,
+        );
+        final isNear = budgetProv.isNearLimit(
+          currentSpent,
+          expenseCurrency: expenseCurrency,
+        );
 
         final Color mainBarColor = isOver
             ? AppTheme.expenseColor
@@ -155,13 +169,35 @@ class BudgetScreen extends StatelessWidget {
                                     Text(
                                       Formatters.formatCurrency(
                                         limit,
-                                        symbol: currency,
+                                        symbol: budgetCurrency,
                                       ),
                                       style: const TextStyle(
                                         fontSize: 24,
                                         fontWeight: FontWeight.w900,
                                       ),
                                     ),
+                                    // إذا كانت هناك عملتان مختلفتان (حساب فارق الصرف)
+                                    if (!budgetProv.areCurrenciesEqual) ...[
+                                      const SizedBox(height: 4),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 3,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: primaryColor.withAlpha(25),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          'تعادل: ${Formatters.formatCurrency(budgetProv.monthlyLimitInCategoriesCurrency, symbol: categoryCurrency)} • (1 $budgetCurrency = ${Formatters.formatNumberOnly(budgetProv.exchangeRate)} $categoryCurrency)',
+                                          style: TextStyle(
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w600,
+                                            color: primaryColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),
@@ -190,8 +226,8 @@ class BudgetScreen extends StatelessWidget {
                             children: [
                               Text(
                                 isOver
-                                    ? 'العجز: ${Formatters.formatCurrency(remaining.abs(), symbol: currency)}'
-                                    : 'المتبقي: ${Formatters.formatCurrency(remaining, symbol: currency)}',
+                                    ? 'العجز: ${Formatters.formatCurrency(remaining.abs(), symbol: expenseCurrency)}'
+                                    : 'المتبقي: ${Formatters.formatCurrency(remaining, symbol: expenseCurrency)}',
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
@@ -284,10 +320,11 @@ class BudgetScreen extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'اضغط لتعديل الفئة',
+                          'العملة: $categoryCurrency',
                           style: TextStyle(
-                            fontSize: 11.5,
+                            fontSize: 12,
                             color: isDark ? Colors.white54 : Colors.black45,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
@@ -385,7 +422,7 @@ class BudgetScreen extends StatelessWidget {
                                           const SizedBox(height: 2),
                                           Text(
                                             catLimit > 0
-                                                ? 'المخصص: ${Formatters.formatCurrency(catLimit, symbol: currency)}'
+                                                ? 'المخصص: ${Formatters.formatCurrency(catLimit, symbol: categoryCurrency)}'
                                                 : 'لم يتم تحديد ميزانية (اضغط للتحديد)',
                                             style: TextStyle(
                                               fontSize: 12,
@@ -406,7 +443,7 @@ class BudgetScreen extends StatelessWidget {
                                         Text(
                                           Formatters.formatCurrency(
                                             catSpent,
-                                            symbol: currency,
+                                            symbol: expenseCurrency,
                                           ),
                                           style: TextStyle(
                                             fontSize: 14.5,
@@ -456,7 +493,7 @@ class BudgetScreen extends StatelessWidget {
               ),
 
               // ==============================================================
-              // [3] زر "إدارة الميزانية" العريض في الأسفل (مطابق للصورة)
+              // [3] زر "إدارة الميزانية" العريض في الأسفل
               // ==============================================================
               SafeArea(
                 top: false,
@@ -495,7 +532,7 @@ class BudgetScreen extends StatelessWidget {
 }
 
 // ============================================================================
-// نافذة تعديل ميزانية تصنيف واحد بسرعة (مع dispose صحيح للـ Controller)
+// نافذة تعديل ميزانية تصنيف واحد بسرعة
 // ============================================================================
 class _SingleCategoryBudgetDialog extends StatefulWidget {
   final CategoryModel category;
@@ -521,7 +558,9 @@ class _SingleCategoryBudgetDialogState
     super.initState();
     _controller = TextEditingController(
       text: widget.currentLimit > 0
-          ? widget.currentLimit.toStringAsFixed(0)
+          ? (widget.currentLimit.truncateToDouble() == widget.currentLimit
+              ? widget.currentLimit.toStringAsFixed(0)
+              : widget.currentLimit.toStringAsFixed(2))
           : '',
     );
   }
@@ -551,6 +590,9 @@ class _SingleCategoryBudgetDialogState
 
   @override
   Widget build(BuildContext context) {
+    final categoryCurrency =
+        Provider.of<BudgetProvider>(context).categoryCurrency;
+
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Row(
@@ -566,6 +608,7 @@ class _SingleCategoryBudgetDialogState
         autofocus: true,
         decoration: InputDecoration(
           hintText: 'مثال: 10000 (أو 0 للإزالة)',
+          suffixText: categoryCurrency,
           errorText: _errorText,
           prefixIcon: const Icon(Icons.account_balance_wallet_outlined),
         ),
@@ -584,179 +627,3 @@ class _SingleCategoryBudgetDialogState
   }
 }
 
-// ============================================================================
-// نافذة "إدارة الميزانية" الشاملة (الميزانية الكلية + جميع التصنيفات)
-// ============================================================================
-class _ManageBudgetSheet extends StatefulWidget {
-  const _ManageBudgetSheet();
-
-  @override
-  State<_ManageBudgetSheet> createState() => _ManageBudgetSheetState();
-}
-
-class _ManageBudgetSheetState extends State<_ManageBudgetSheet> {
-  late final TextEditingController _monthlyController;
-  final Map<String, TextEditingController> _categoryControllers = {};
-  String? _errorText;
-
-  @override
-  void initState() {
-    super.initState();
-    final budgetProv = Provider.of<BudgetProvider>(context, listen: false);
-    _monthlyController = TextEditingController(
-      text: budgetProv.monthlyLimit.toStringAsFixed(0),
-    );
-    for (final cat in AppConstants.expenseCategories) {
-      final lim = budgetProv.getCategoryLimit(cat.id);
-      _categoryControllers[cat.id] = TextEditingController(
-        text: lim > 0 ? lim.toStringAsFixed(0) : '',
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _monthlyController.dispose();
-    for (final c in _categoryControllers.values) {
-      c.dispose();
-    }
-    super.dispose();
-  }
-
-  Future<void> _saveAll() async {
-    final monthly = double.tryParse(_monthlyController.text.trim());
-    if (monthly == null || monthly <= 0) {
-      setState(() => _errorText = 'أدخل قيمة صحيحة أكبر من الصفر للميزانية الشهرية');
-      return;
-    }
-
-    final Map<String, double> updatedCats = {};
-    for (final entry in _categoryControllers.entries) {
-      final raw = entry.value.text.trim();
-      if (raw.isEmpty) continue;
-      final parsed = double.tryParse(raw);
-      if (parsed != null && parsed > 0) {
-        updatedCats[entry.key] = parsed;
-      }
-    }
-
-    await Provider.of<BudgetProvider>(context, listen: false).updateAllBudgets(
-      monthlyLimit: monthly,
-      categoryLimits: updatedCats,
-    );
-
-    if (!mounted) return;
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('تم حفظ إعدادات الميزانية بنجاح ✅')),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final currency = Provider.of<ExpenseProvider>(context).currencySymbol;
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-
-    return Padding(
-      padding: EdgeInsets.fromLTRB(20, 14, 20, bottomInset + 24),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 42,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey.withAlpha(110),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'إدارة الميزانية الشهرية',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 14),
-
-            // الميزانية الكلية
-            const Text(
-              'السقف الشهري الكلي',
-              style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _monthlyController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(
-                hintText: 'مثال: 50000',
-                suffixText: currency,
-                errorText: _errorText,
-                prefixIcon: const Icon(Icons.account_balance_wallet_outlined),
-              ),
-            ),
-            const SizedBox(height: 18),
-
-            // ميزانيات الفئات
-            const Text(
-              'تقسيم الميزانية على التصنيفات (اختياري)',
-              style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            ...AppConstants.expenseCategories.map((cat) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: Row(
-                  children: [
-                    Icon(cat.icon, color: cat.color, size: 22),
-                    const SizedBox(width: 10),
-                    SizedBox(
-                      width: 90,
-                      child: Text(
-                        cat.name,
-                        style: const TextStyle(
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: TextField(
-                        controller: _categoryControllers[cat.id],
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: 'بدون حد',
-                          isDense: true,
-                          suffixText: currency,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 10,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton.icon(
-                onPressed: _saveAll,
-                icon: const Icon(Icons.save_outlined),
-                label: const Text('حفظ الميزانية'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

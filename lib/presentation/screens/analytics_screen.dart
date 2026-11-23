@@ -96,7 +96,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> {
         final barData = _buildMonthlyBarData(periodTransactions);
         final currency = expenseProv.currencySymbol;
         final insights = expenseProv.generateSmartInsights(
-          monthlyBudgetLimit: budgetProv.monthlyLimit,
+          monthlyBudgetLimit: budgetProv.monthlyLimitIn(currency),
         );
 
         // حساب أعلى قيمة لمحور الأعمدة

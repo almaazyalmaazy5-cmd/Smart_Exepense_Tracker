@@ -703,6 +703,9 @@ class _BackupRestoreDialogState extends State<_BackupRestoreDialog> {
         await Provider.of<BudgetProvider>(context, listen: false)
             .updateAllBudgets(
           monthlyLimit: restoredBudget.monthlyLimit,
+          currency: restoredBudget.currency,
+          categoryCurrency: restoredBudget.categoryCurrency,
+          exchangeRate: restoredBudget.exchangeRate,
           categoryLimits: restoredBudget.categoryLimits,
         );
       }
