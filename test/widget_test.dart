@@ -12,6 +12,8 @@ class MockExpenseRepository implements ExpenseRepository {
   BudgetModel budget = BudgetModel(monthlyLimit: 1000.0, month: 1, year: 2026);
   String currency = r'$';
   bool isDark = false;
+  String themeColor = 'emerald_green';
+  String languageCode = 'ar';
 
   @override
   Future<List<TransactionModel>> getAllTransactions() async =>
@@ -32,6 +34,11 @@ class MockExpenseRepository implements ExpenseRepository {
       items.removeWhere((i) => i.id == id);
 
   @override
+  Future<void> saveAllTransactions(List<TransactionModel> transactions) async {
+    items = List<TransactionModel>.from(transactions);
+  }
+
+  @override
   Future<BudgetModel> getBudget() async => budget;
 
   @override
@@ -48,6 +55,18 @@ class MockExpenseRepository implements ExpenseRepository {
 
   @override
   Future<void> setDarkTheme(bool dark) async => isDark = dark;
+
+  @override
+  Future<String> getThemeColor() async => themeColor;
+
+  @override
+  Future<void> setThemeColor(String colorKey) async => themeColor = colorKey;
+
+  @override
+  Future<String> getLanguageCode() async => languageCode;
+
+  @override
+  Future<void> setLanguageCode(String code) async => languageCode = code;
 }
 
 void main() {
@@ -114,15 +133,58 @@ void main() {
       expect(expenseProvider.transactions.length, 0);
       expect(expenseProvider.totalExpense, 0.0);
     });
+
+    test('Updating a transaction updates amount and paymentMethod', () async {
+      await expenseProvider.addTransaction(
+        title: 'Lunch',
+        amount: 20.0,
+        type: TransactionType.expense,
+        categoryId: 'food',
+        categoryName: 'الطعام',
+        categoryIconCode: 0xe532,
+        categoryColorHex: 0xFFE53935,
+        date: DateTime.now(),
+        paymentMethod: 'cash',
+      );
+
+      final original = expenseProvider.transactions.first;
+      expect(original.paymentMethod, 'cash');
+
+      await expenseProvider.updateTransaction(
+        original.copyWith(amount: 35.0, paymentMethod: 'e_wallet'),
+      );
+
+      expect(expenseProvider.totalExpense, 35.0);
+      expect(expenseProvider.transactions.first.paymentMethod, 'e_wallet');
+    });
+
+    test('Smart insights identifies top spending category and budget remaining', () async {
+      await expenseProvider.addTransaction(
+        title: 'مطعم',
+        amount: 300.0,
+        type: TransactionType.expense,
+        categoryId: 'food',
+        categoryName: 'الطعام',
+        categoryIconCode: 0xe532,
+        categoryColorHex: 0xFFE53935,
+        date: DateTime.now(),
+      );
+
+      final insights =
+          expenseProvider.generateSmartInsights(monthlyBudgetLimit: 1000.0);
+      expect(insights.any((s) => s.contains('الطعام')), true);
+      expect(insights.any((s) => s.contains('70%')), true);
+    });
   });
 
   group('BudgetProvider Unit Tests', () {
     late MockExpenseRepository mockRepo;
     late BudgetProvider budgetProvider;
 
-    setUp(() {
+    setUp(() async {
       mockRepo = MockExpenseRepository();
       budgetProvider = BudgetProvider(repository: mockRepo);
+      await budgetProvider.loadBudget();
     });
 
     test('Usage percentage and remaining budget calculation', () {
@@ -137,6 +199,14 @@ void main() {
 
       // Near limit (>= 80%)
       expect(budgetProvider.isNearLimit(850.0), true);
+    });
+
+    test('Category sub-budget limits and 80% warning calculation', () async {
+      await budgetProvider.updateCategoryLimit('food', 500.0);
+      expect(budgetProvider.getCategoryLimit('food'), 500.0);
+      expect(budgetProvider.categoryUsageRatio('food', 250.0), 0.5);
+      expect(budgetProvider.isCategoryNearLimit('food', 420.0), true);
+      expect(budgetProvider.isCategoryOverBudget('food', 550.0), true);
     });
   });
 }

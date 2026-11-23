@@ -1,5 +1,11 @@
 import '../../core/constants/app_constants.dart';
 
+// ============================================================================
+// نموذج المعاملة المالية (TransactionModel)
+// ----------------------------------------------------------------------------
+// يمثّل كل عملية دخل أو مصروف مع تصنيفها، تاريخها، طريقة الدفع، والملاحظات.
+// ============================================================================
+
 class TransactionModel {
   final String id;
   final String title;
@@ -10,6 +16,7 @@ class TransactionModel {
   final int categoryIconCode;
   final int categoryColorHex;
   final DateTime date;
+  final String? paymentMethod; // 'cash' | 'bank_transfer' | 'e_wallet'
   final String? notes;
 
   TransactionModel({
@@ -22,6 +29,7 @@ class TransactionModel {
     required this.categoryIconCode,
     required this.categoryColorHex,
     required this.date,
+    this.paymentMethod,
     this.notes,
   });
 
@@ -39,6 +47,7 @@ class TransactionModel {
       'categoryIconCode': categoryIconCode,
       'categoryColorHex': categoryColorHex,
       'date': date.toIso8601String(),
+      'paymentMethod': paymentMethod,
       'notes': notes,
     };
   }
@@ -54,6 +63,7 @@ class TransactionModel {
       categoryIconCode: map['categoryIconCode'] as int,
       categoryColorHex: map['categoryColorHex'] as int,
       date: DateTime.parse(map['date'] as String),
+      paymentMethod: map['paymentMethod'] as String?,
       notes: map['notes'] as String?,
     );
   }
@@ -68,6 +78,7 @@ class TransactionModel {
     int? categoryIconCode,
     int? categoryColorHex,
     DateTime? date,
+    String? paymentMethod,
     String? notes,
   }) {
     return TransactionModel(
@@ -80,6 +91,7 @@ class TransactionModel {
       categoryIconCode: categoryIconCode ?? this.categoryIconCode,
       categoryColorHex: categoryColorHex ?? this.categoryColorHex,
       date: date ?? this.date,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
       notes: notes ?? this.notes,
     );
   }

@@ -9,6 +9,13 @@ import 'presentation/providers/expense_provider.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/screens/main_navigation_screen.dart';
 
+// ============================================================================
+// نقطة البداية الرئيسية للتطبيق (main.dart)
+// ----------------------------------------------------------------------------
+// هنا يتم ربط مزودي الحالة (Providers) وتطبيق الثيم المختار من المستخدم
+// (الوضع النهاري / الداكن + اللون المفضل) واتجاه الواجهة العربية (RTL).
+// ============================================================================
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -40,17 +47,18 @@ class SmartExpenseApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final selectedColor = themeProvider.selectedColor;
 
     return MaterialApp(
       title: 'Smart Expense Tracker',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
+      theme: AppTheme.lightTheme(selectedColor),
+      darkTheme: AppTheme.darkTheme(selectedColor),
       themeMode: themeProvider.themeMode,
       builder: (context, child) {
-        // Enforce Arabic RTL layout for clean readability
+        // اتجاه الواجهة حسب اللغة المختارة من الإعدادات (RTL للعربية و LTR للإنجليزية)
         return Directionality(
-          textDirection: TextDirection.rtl,
+          textDirection: themeProvider.textDirection,
           child: child!,
         );
       },

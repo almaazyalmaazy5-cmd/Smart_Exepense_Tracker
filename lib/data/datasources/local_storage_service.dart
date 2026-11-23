@@ -9,6 +9,8 @@ class LocalStorageService {
   static const String _budgetKey = 'app_budget_v1';
   static const String _currencyKey = 'app_currency_symbol';
   static const String _themeKey = 'app_is_dark_theme';
+  static const String _themeColorKey = 'app_theme_color_key';
+  static const String _languageKey = 'app_language_code';
 
   Future<List<TransactionModel>> getTransactions() async {
     final prefs = await SharedPreferences.getInstance();
@@ -39,7 +41,17 @@ class LocalStorageService {
     final String? data = prefs.getString(_budgetKey);
     if (data == null || data.isEmpty) {
       final now = DateTime.now();
-      return BudgetModel(monthlyLimit: 2500.0, month: now.month, year: now.year);
+      return BudgetModel(
+        monthlyLimit: 2500.0,
+        month: now.month,
+        year: now.year,
+        categoryLimits: const {
+          'food': 600.0,
+          'transport': 300.0,
+          'shopping': 400.0,
+          'bills': 500.0,
+        },
+      );
     }
     try {
       final Map<String, dynamic> decoded = jsonDecode(data) as Map<String, dynamic>;
@@ -73,6 +85,26 @@ class LocalStorageService {
   Future<void> saveIsDarkTheme(bool isDark) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_themeKey, isDark);
+  }
+
+  Future<String> getThemeColorKey() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_themeColorKey) ?? 'emerald_green';
+  }
+
+  Future<void> saveThemeColorKey(String colorKey) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_themeColorKey, colorKey);
+  }
+
+  Future<String> getLanguageCode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_languageKey) ?? 'ar';
+  }
+
+  Future<void> saveLanguageCode(String code) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_languageKey, code);
   }
 
   List<TransactionModel> _getInitialSeedTransactions() {

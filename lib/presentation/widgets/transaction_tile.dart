@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/formatters.dart';
 import '../../data/models/transaction_model.dart';
@@ -98,7 +99,7 @@ class TransactionTile extends StatelessWidget {
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(
-                IconData(transaction.categoryIconCode, fontFamily: 'MaterialIcons'),
+                AppConstants.getCategoryIcon(transaction.categoryId),
                 color: Color(transaction.categoryColorHex),
                 size: 24,
               ),

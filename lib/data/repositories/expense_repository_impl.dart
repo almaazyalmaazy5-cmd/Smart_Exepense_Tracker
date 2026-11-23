@@ -39,6 +39,11 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
   }
 
   @override
+  Future<void> saveAllTransactions(List<TransactionModel> transactions) async {
+    await _storageService.saveTransactions(transactions);
+  }
+
+  @override
   Future<BudgetModel> getBudget() async {
     return await _storageService.getBudget();
   }
@@ -66,5 +71,25 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
   @override
   Future<void> setDarkTheme(bool isDark) async {
     await _storageService.saveIsDarkTheme(isDark);
+  }
+
+  @override
+  Future<String> getThemeColor() async {
+    return await _storageService.getThemeColorKey();
+  }
+
+  @override
+  Future<void> setThemeColor(String colorKey) async {
+    await _storageService.saveThemeColorKey(colorKey);
+  }
+
+  @override
+  Future<String> getLanguageCode() async {
+    return await _storageService.getLanguageCode();
+  }
+
+  @override
+  Future<void> setLanguageCode(String code) async {
+    await _storageService.saveLanguageCode(code);
   }
 }
